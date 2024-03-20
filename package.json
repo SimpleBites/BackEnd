@@ -1,0 +1,29 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "this is the backend for recipe website",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimpleBites/BackEnd.git"
+  },
+  "author": "jureplure",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SimpleBites/BackEnd/issues"
+  },
+  "homepage": "https://github.com/SimpleBites/BackEnd#readme",
+  "dependencies": {
+    "bad-words": "^3.0.4",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-flash": "^0.0.2",
+    "express-validator": "^7.0.1",
+    "mysql": "^2.18.1"
+  }
+}
