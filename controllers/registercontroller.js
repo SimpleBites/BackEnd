@@ -5,7 +5,7 @@ const session = require("express-session")
 const flash = require("connect-flash")
 const cors = require("cors")
 const bodyparser = require("body-parser")
-const bcrypt = require("bcrypt")
+const crypto = require("crypto")
 const moment = require('moment');
 const jwt = require("jsonwebtoken")
 const {authcheck} = require("../middleware/authcheck")
@@ -13,12 +13,32 @@ require('dotenv').config();
 
 
 const corsOptions = {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:5000"],
     credentials: true,
     optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     allowedHeaders: "Content-Type,Authorization"
 }
+
+function hashPassword(password, callback) {
+    const salt = crypto.randomBytes(16).toString('hex');  // Generate a 16-byte salt
+    const iterations = 10000;  // Recommended number of iterations
+    const keyLength = 64;  // Recommended key length
+    const digest = 'sha512';  // Recommended hash function
+  
+    crypto.pbkdf2Sync(password, salt, iterations, keyLength, digest, (err, derivedKey) => {
+      if (err) {
+        callback(err, null);
+      } else {
+        // Callback with the salt and the hash
+        callback(null, {
+          salt: salt,
+          hash: derivedKey.toString('hex')
+        });
+      }
+    });
+  }
+  
 
 const app = new express()
 
@@ -69,17 +89,25 @@ app.post("/registersubmit", [
     }),
 ], (req, res) => {
     const errors = validationResult(req);
-    console.log(req.body);
+    
     if (!errors.isEmpty()) {
         res.json({ errors: errors.array() });
     } else {
-        const saltrounds = 10;
-        const hashedPassword = bcrypt.hashSync(req.body.password1, saltrounds);
+        const reqpassword = req.body.password1
+        const salt = crypto.randomBytes(16).toString('hex');  // Generate a 16-byte salt
+        const iterations = 10000;  // Recommended number of iterations
+        const keyLength = 64;  // Recommended key length
+        const digest = 'sha512';  
+        const hashedPassword = crypto.pbkdf2Sync(reqpassword, salt, iterations, keyLength, digest).toString('hex');
+      
+   
+
         let formattedDate = moment().format('YYYY-MM-DD HH:mm:ss');
         const userData = {
             username: req.body.username,
             email: req.body.email,
             password: hashedPassword,
+            salt: salt,
             created_at: formattedDate,
             updated_at: formattedDate
         };
@@ -92,7 +120,7 @@ app.post("/registersubmit", [
             }
         
             connection.query('INSERT INTO users SET ?', userData, (err, results) => {
-                // Always release the connection back to the pool first
+                
                 connection.release();
         
                 if (err) {
@@ -100,17 +128,19 @@ app.post("/registersubmit", [
                     res.status(500).send('Error registering user');
                     return;
                 }
+
+                const token = jwt.sign({ userId: results.insertId}, 'harrypotter', { expiresIn: '1h' });
+                req.session.token = token
         
-                // Set session expiration
                 var hour = 3600000;
                 req.session.cookie.expires = new Date(Date.now() + hour);
                 req.session.cookie.maxAge = hour;
         
-                // Store user details in the session
+                
                 req.session.userId = results.insertId;
                 req.session.username = userData.username;
         
-                // Save the session before sending the response
+                
                 req.session.save(err => {
                     if (err) {
                         console.error('Session save error:', err);
@@ -118,7 +148,6 @@ app.post("/registersubmit", [
                         return;
                     }
         
-                    // Respond after session save is successfulsend('User registered and session stored');
                     return res.json({redirect:true, url: "http://localhost:3000/home"})
                 });
             });

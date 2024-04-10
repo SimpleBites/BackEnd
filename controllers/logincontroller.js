@@ -5,7 +5,7 @@ const session = require("express-session")
 const flash = require("connect-flash")
 const cors = require("cors")
 const bodyparser = require("body-parser")
-const bcrypt = require("bcrypt")
+const crypto = require("crypto")
 const moment = require('moment');
 const jwt = require("jsonwebtoken")
 const {authcheck} = require("../middleware/authcheck")
@@ -52,15 +52,15 @@ app.post('/loginsubmit', [
         pool.getConnection((err, connection) => {
           if (err) {
             console.error('Error getting database connection:', err);
-            connection.release();
             return reject(new Error("Database connection error"));
           }
           connection.query("SELECT email FROM users WHERE email = ?", [email], (err, results) => {
-            connection.release();
             if (err) {
+              connection.release();
               return reject(new Error("Database query error"));
             }
             if (results.length === 0) {
+              connection.release();
               return reject(new Error("No user with that email"));
             }
             resolve(true);
@@ -75,62 +75,54 @@ app.post('/loginsubmit', [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email} = req.body;
+  const { email, password } = req.body;
 
-  pool.getConnection(async function(err, connection) {
+  pool.getConnection(function(err, connection) {
     if (err) {
       console.error('Error getting database connection:', err);
       return res.status(500).send('Database error');
     }
 
-    connection.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
+    connection.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
       if (err) {
         connection.release();
         return res.status(500).send('Database error');
       }
 
-    
+      if (results.length > 0) {
         const user = results[0];
-        const dbpassword = user.password
-        const password = req.body.password
-        const passwordMatch = async (password, dbpassword) => {
-          return await bcrypt.compare(password, dbpassword);
-        };
-
-      
-        if (!passwordMatch) {
-          //connection.release();
-          console.log("incorrect password")
-          //res.json({ errors: [{ msg: "Incorrect password" }] });
-        }
-        else{
-          var hour = 3600000;
-        req.session.userId = user.id;
-        req.session.username = user.username;
-        req.session.cookie.expires = new Date(Date.now() + hour);
-        req.session.cookie.maxAge = hour;
-
-        // Save the session before sending the response
-        req.session.save(err => {
-          connection.release(); // Release connection after session save
-          if (err) {
-            console.error('Error saving session:', err);
-            return res.status(500).send('Error saving session');
-          }
-          // Response should be sent after session is saved successfully
-          return res.json({ redirect: true, url: "http://localhost:3000/home" });
-        });
-        }
-
-        // Password matches, set session variables
+        const hash = crypto.pbkdf2Sync(password, user.salt, 10000, 64, 'sha512').toString('hex');
         
-       
-      })
+        if (hash === user.password) {
+          const token = jwt.sign({ userId: user.id }, 'harrypotter', { expiresIn: '1h' });
+          req.session.token = token;
+          req.session.userId = user.id;
+          req.session.username = user.username;
+
+          var hour = 3600000;
+          req.session.cookie.expires = new Date(Date.now() + hour);
+          req.session.cookie.maxAge = hour;
+
+          req.session.save(err => {
+            connection.release(); 
+            if (err) {
+              console.error('Error saving session:', err);
+              return res.status(500).send('Error saving session');
+            }
+            return res.json({ redirect: true, url: "http://localhost:3000/home" });
+          });
+        } else {
+          connection.release();
+          console.log("Incorrect password");
+          return res.status(401).json({ errors: [{ msg: "Incorrect password" }] });
+        }
+      } else {
+        connection.release();
+        return res.status(404).json({ errors: [{ msg: "User not found" }] });
+      }
     });
   });
-
-
-
+});
 
 
 app.post("/logout", ((req,res) => {
@@ -148,8 +140,16 @@ app.get("/session", ((req,res) => {
   res.end()
 }))
 
-  app.get('/protected-route',(req, res) => {
-  
+  app.get('/protected-route', async (req, res) => {
+    const response = await fetch('http://localhost:5000/api/recipes', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json()
+      console.log(data)
   });
   
   
