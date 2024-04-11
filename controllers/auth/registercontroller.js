@@ -65,7 +65,7 @@ app.get("/Register",  authcheck, ((req,res) => {
 }))
 
 app.post("/registersubmit", [
-    body("username").isLength({ length: 3 }).withMessage("Username must be at least 3 characters long"),
+    body("username").isLength({ min: 3 }).withMessage("Username must be at least 3 characters long").isLength({max:18}).withMessage("username can not be more than 18 characters "),
     body('email').isEmail().normalizeEmail().withMessage('Email must be valid').custom(async email => {
         const user = await new Promise((resolve, reject) => {
             connection.query("SELECT email from users where email = ?", [email], (err, results, fields) => {
@@ -94,9 +94,9 @@ app.post("/registersubmit", [
         res.json({ errors: errors.array() });
     } else {
         const reqpassword = req.body.password1
-        const salt = crypto.randomBytes(16).toString('hex');  // Generate a 16-byte salt
-        const iterations = 10000;  // Recommended number of iterations
-        const keyLength = 64;  // Recommended key length
+        const salt = crypto.randomBytes(16).toString('hex'); 
+        const iterations = 10000; 
+        const keyLength = 64;  
         const digest = 'sha512';  
         const hashedPassword = crypto.pbkdf2Sync(reqpassword, salt, iterations, keyLength, digest).toString('hex');
       
