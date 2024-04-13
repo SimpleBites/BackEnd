@@ -5,30 +5,8 @@ const crypto = require("crypto")
 const jwt = require("jsonwebtoken")
 
 const login = [
-  body('email')
-    .isEmail().withMessage('Enter a valid email address')
-    .custom(email => {
-      return new Promise((resolve, reject) => {
-        pool.getConnection((err, connection) => {
-          if (err) {
-            console.error('Error getting database connection:', err);
-            return reject(new Error("Database connection error"));
-          }
-          connection.query("SELECT email FROM users WHERE email = ?", [email], (err, results) => {
-            if (err) {
-              connection.release();
-              return reject(new Error("Database query error"));
-            }
-            if (results.length === 0) {
-              connection.release();
-              return reject(new Error("No user with that email"));
-            }
-            resolve(true);
-          });
-        });
-      });
-    }),
-    body('password').notEmpty().withMessage('Password is required'),
+  body('email').isEmail().withMessage('Enter a valid email address'),
+  body('password').notEmpty().withMessage('Password is required'),
 (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -49,9 +27,19 @@ const login = [
         return res.status(500).send('Database error');
       }
 
-      if (results.length > 0) {
+      if(results.length === 0){
+        connection.release()
+        const errors = [{value: "field", value: req.body.email, msg: 'No user with that email', path: 'email', location: 'body'}];
+        return res.json({ errors: errors});
+        console.log(errors)
+      }
+      else if (results.length > 0) {
+        console.log(results)
+        
+        
         const user = results[0];
         const hash = crypto.pbkdf2Sync(password, user.salt, 10000, 64, 'sha512').toString('hex');
+        
         
         if (hash === user.password) {
           const token = jwt.sign({ userId: user.id }, 'harrypotter', { expiresIn: '1h' });
@@ -75,11 +63,8 @@ const login = [
           connection.release();
           console.log("Incorrect password");
           const errors = [{value: "field", value: password, msg: 'Incorrect password', path: 'password', location: 'body'}]
-           //res.json({ errors: errors});
+          return res.json({ errors: errors});
         }
-      } else {
-        connection.release();
-        return res.status(404).json({ errors: [{ msg: "User not found" }] });
       }
     });
   })
