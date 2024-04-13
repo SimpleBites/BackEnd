@@ -1,5 +1,5 @@
 const express = require("express")
-const {connection, pool} = require("../Database/mysql")
+const {connection, pool} = require("../../Database/mysql")
 const {body, validationResult} = require("express-validator")
 const session = require("express-session")
 const flash = require("connect-flash")
@@ -8,7 +8,7 @@ const bodyparser = require("body-parser")
 const crypto = require("crypto")
 const moment = require('moment');
 const jwt = require("jsonwebtoken")
-const {authcheck} = require("../middleware/authcheck")
+const {authcheck} = require("../../middleware/authcheck")
 require('dotenv').config();
 
 
@@ -38,8 +38,8 @@ app.use(cors(corsOptions))
 app.use(bodyparser.json())
 app.use(flash())
 
-app.get("/register", authcheck, ((req,res) => {
-  res.write("hello world")
+app.get("/register", ((req,res) => {
+  res.write(JSON.stringify(process.env.EMAIL))
   console.log("test")
   res.end()
 }))
@@ -98,7 +98,7 @@ app.post('/loginsubmit', [
           req.session.token = token;
           req.session.userId = user.id;
           req.session.username = user.username;
-
+          req.session.email = user.email
           var hour = 3600000;
           req.session.cookie.expires = new Date(Date.now() + hour);
           req.session.cookie.maxAge = hour;
