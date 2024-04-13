@@ -1,50 +1,10 @@
-const express = require("express")
 const {connection, pool} = require("../../Database/mysql")
 const {body, validationResult} = require("express-validator")
 const session = require("express-session")
-const flash = require("connect-flash")
-const cors = require("cors")
-const bodyparser = require("body-parser")
 const crypto = require("crypto")
-const moment = require('moment');
 const jwt = require("jsonwebtoken")
-const {authcheck} = require("../../middleware/authcheck")
-require('dotenv').config();
 
-
-const corsOptions = {
-    origin: "http://localhost:3000",
-    credentials: true,
-    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: "Content-Type,Authorization"
-}
-
-const app = new express()
-
-app.use(bodyparser.urlencoded({
-    extended: true
-}));
-
-app.use(session({
-    secret: "harrypotter",
-    saveUninitialized: false,
-    cookie: {secure: false},
-    resave: false
-}))
-
-app.use(express.json())
-app.use(cors(corsOptions))
-app.use(bodyparser.json())
-app.use(flash())
-
-app.get("/register", ((req,res) => {
-  res.write(JSON.stringify(process.env.EMAIL))
-  console.log("test")
-  res.end()
-}))
-
-app.post('/loginsubmit', [
+const login = [
   body('email')
     .isEmail().withMessage('Enter a valid email address')
     .custom(email => {
@@ -68,11 +28,11 @@ app.post('/loginsubmit', [
         });
       });
     }),
-    body('password').notEmpty().withMessage('Password is required')
-], (req, res) => {
+    body('password').notEmpty().withMessage('Password is required'),
+(req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.json({ errors: errors.array() });
   }
 
   const { email, password } = req.body;
@@ -114,49 +74,27 @@ app.post('/loginsubmit', [
         } else {
           connection.release();
           console.log("Incorrect password");
-          return res.status(401).json({ errors: [{ msg: "Incorrect password" }] });
+          const errors = [{value: "field", value: password, msg: 'Incorrect password', path: 'password', location: 'body'}]
+           //res.json({ errors: errors});
         }
       } else {
         connection.release();
         return res.status(404).json({ errors: [{ msg: "User not found" }] });
       }
     });
-  });
-});
-
-
-app.post("/logout", ((req,res) => {
-  req.session.destroy((err) => {
-      if(err){
-          console.log(err)
-      }
   })
-  return res.json({redirect:true, url: "http://localhost:3000/login"})
-}))
 
+}
+]
 
-app.get("/session", ((req,res) => {
-  res.send(req.session)
-  res.end()
-}))
-
-  app.get('/protected-route', async (req, res) => {
-    const response = await fetch('http://localhost:5000/api/recipes', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json()
-      console.log(data)
-  });
+const logout = ((req,res) => {
   
-  
-    app.use("*", ((req,res) => {
-        res.status(404).send("<h1>Resource not found</h1>")
-    }))
-    
-    app.listen(4000, () => {
-        console.log("app listening on port: 4000")
-    })
+  req.session.destroy((err) => {
+    if(err){
+        console.log(err)
+    }
+})
+return res.json({redirect:true, url: "http://localhost:3000/login"})
+})
+
+module.exports = {login, logout}

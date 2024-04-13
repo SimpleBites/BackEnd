@@ -1,70 +1,11 @@
-const express = require("express")
 const {connection, pool} = require("../../Database/mysql")
 const {body, validationResult} = require("express-validator")
 const session = require("express-session")
-const flash = require("connect-flash")
-const cors = require("cors")
-const bodyparser = require("body-parser")
 const crypto = require("crypto")
 const moment = require('moment');
 const jwt = require("jsonwebtoken")
-//const {authcheck} = require("../../middleware/authcheck")
-require('dotenv').config();
 
-
-const corsOptions = {
-    origin: ["http://localhost:3000", "http://localhost:5000"],
-    credentials: true,
-    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: "Content-Type,Authorization"
-}
-
-function hashPassword(password, callback) {
-    const salt = crypto.randomBytes(16).toString('hex');  // Generate a 16-byte salt
-    const iterations = 10000;  // Recommended number of iterations
-    const keyLength = 64;  // Recommended key length
-    const digest = 'sha512';  // Recommended hash function
-  
-    crypto.pbkdf2Sync(password, salt, iterations, keyLength, digest, (err, derivedKey) => {
-      if (err) {
-        callback(err, null);
-      } else {
-        // Callback with the salt and the hash
-        callback(null, {
-          salt: salt,
-          hash: derivedKey.toString('hex')
-        });
-      }
-    });
-  }
-  
-
-const app = new express()
-
-app.use(bodyparser.urlencoded({
-    extended: true
-}));
-
-app.use(session({
-    secret: "harrypotter",
-    saveUninitialized: false,
-    cookie: {secure: false},
-    resave: false
-}))
-
-app.use(express.json())
-app.use(cors(corsOptions))
-app.use(bodyparser.json())
-app.use(flash())
-
-app.get("/Register", ((req,res) => {
-   
-    console.log("test")
-    res.end()
-}))
-
-app.post("/registersubmit", [
+const register = [
     body("username").isLength({ min: 3 }).withMessage("Username must be at least 3 characters long").isLength({max:18}).withMessage("username can not be more than 18 characters "),
     body('email').isEmail().normalizeEmail().withMessage('Email must be valid').custom(async email => {
         const user = await new Promise((resolve, reject) => {
@@ -87,7 +28,7 @@ app.post("/registersubmit", [
         }
         return true;
     }),
-], (req, res) => {
+(req, res) => {
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
@@ -155,19 +96,8 @@ app.post("/registersubmit", [
         });
 
     }
-});
+}
+]
 
+module.exports = {register}
 
-
-app.get("/session", ((req,res) => {
-    res.send(req.session)
-    res.end()
-}))
-
-app.use("*", ((req,res) => {
-    res.status(404).send("<h1>Resource not found</h1>")
-}))
-
-app.listen(4000, () => {
-    console.log("app listening on port: 4000")
-})
