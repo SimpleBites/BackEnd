@@ -28,7 +28,7 @@ const register = [
         }
         return true;
     }),
-(req, res) => {
+async (req, res) => {
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
@@ -72,13 +72,12 @@ const register = [
                 }
 
                 const token = jwt.sign({ userId: results.insertId}, 'harrypotter', { expiresIn: '1h' });
-                req.session.token = token
+               
         
                 var hour = 3600000;
                 req.session.cookie.expires = new Date(Date.now() + hour);
-                req.session.cookie.maxAge = hour;
-        
-                
+                req.session.cookie.maxAge = hour; 
+                req.session.token = token           
                 req.session.userId = results.insertId;
                 req.session.username = userData.username;
                 req.session.email = userData.email

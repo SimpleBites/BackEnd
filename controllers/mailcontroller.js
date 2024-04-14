@@ -1,72 +1,51 @@
-const express = require("express")
-const {connection, pool} = require("../../Database/mysql")
-const {body, validationResult} = require("express-validator")
-const session = require("express-session")
-const flash = require("connect-flash")
-const cors = require("cors")
-const bodyparser = require("body-parser")
-const crypto = require("crypto")
-const moment = require('moment');
-const jwt = require("jsonwebtoken")
-//const {authcheck} = require("../../middleware/authcheck")
-require('dotenv').config();
+const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
+const {body} = require("express-validator")
+// These id's and secrets should come from .env file.
+const CLIENT_ID = '228734126079-nvk923am6f08mrp9ickro07vfkqb6i9a.apps.googleusercontent.com';
+const CLEINT_SECRET = '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';
+const REDIRECT_URI = 'http://localhost:3000/home';
+const REFRESH_TOKEN = '1//04apBy8mUTaDzCgYIARAAGAQSNgF-L9Irg8GFymgFNgLTSA8Vx8HFHR8ujHEt85fj-YekahVUGbEGBacBVzh62IO6c_Ffe8eIWA';
 
+const oAuth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLEINT_SECRET,
+  REDIRECT_URI
+);
+oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
-const corsOptions = {
-    origin: ["http://localhost:3000"],
-    credentials: true,
-    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: "Content-Type,Authorization"
+const sendMail = async (req, res) => {
+    try {
+        const accessToken = await oAuth2Client.getAccessToken();
+    
+        const transport = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            type: 'OAuth2',
+            user: 'jansoniusjur@gmail.com', // Your email remains as the authenticated user
+            clientId: CLIENT_ID,
+            clientSecret: CLEINT_SECRET,
+            refreshToken: REFRESH_TOKEN,
+            accessToken: accessToken,
+          },
+        });
+    
+        const mailOptions = {
+          from: req.body.email, // Sender's address provided in the request body
+          to: req.body.toEmail || 'jansoniusjur@gmail.com', // Recipient's address, defaults to your email if not provided
+          subject: req.body.subject,
+          text: req.body.message,
+          html: `<h1>${req.body.message}</h1>`,
+        };
+    
+        const result = await transport.sendMail(mailOptions);
+        console.log(req.body.email)
+        //console.log(result);
+        return result;
+        
+      } catch (error) {
+        return error;
+      }
 }
 
-
-const app = new express()
-
-app.use(bodyparser.urlencoded({
-    extended: true
-}));
-
-app.use(session({
-    secret: "harrypotter",
-    saveUninitialized: false,
-    cookie: {secure: false},
-    resave: false
-}))
-
-app.use(express.json())
-app.use(cors(corsOptions))
-app.use(bodyparser.json())
-
-
-
-app.post("/sendEmail", ((req,res) => {
-    const transporter = nodemailer.createTransport({
-        service: "gmail",
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: {user: process.env.EMAIL, pass: process.env.EMAIL_PASS}
-    })
-
-    async function main() {
-        // send mail with defined transport object
-        const info = await transporter.sendMail({
-          from: req.session.email, // sender address
-          to: "jansoniusjur@gmail.com", // list of receivers
-          subject: "Hello ✔", // Subject line
-          text: "Hello world?", // plain text body
-          html: "<b>Hello world?</b>", // html body
-        });
-      
-        console.log("Message sent: %s", info.messageId);
-        // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
-      }
-      
-      main().catch(console.error);
-      
-}))
-
-app.listen(4000, () => {
-    console.log("app listening on port: 4000")
-})
+module.exports = {sendMail}
