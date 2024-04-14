@@ -1,19 +1,16 @@
 const express = require("express")
-const {connection, pool} = require("../Database/mysql")
-const {body, validationResult} = require("express-validator")
 const session = require("express-session")
-const flash = require("connect-flash")
 const cors = require("cors")
 const bodyparser = require("body-parser")
-const bcrypt = require("bcrypt")
-const moment = require('moment');
-const jwt = require("jsonwebtoken")
-const {authcheck} = require("../middleware/authcheck")
+const {register} = require("../controllers/auth/registercontroller")
+const {login, logout} = require("../controllers/auth/logincontroller")
+//const {authcheck} = require("../../middleware/authcheck")
+
 require('dotenv').config();
 
 
 const corsOptions = {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:5000"],
     credentials: true,
     optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
@@ -36,10 +33,20 @@ app.use(session({
 app.use(express.json())
 app.use(cors(corsOptions))
 app.use(bodyparser.json())
-app.use(flash())
-const {registersubmit} = require("../controllers/registercontroller")
 
-const router = express.Router()
+app.post("/registerSubmit", register)
+app.post("/loginSubmit", login)
+app.post("/logout", logout)
 
-router.post("/registersubmit", registersubmit)
+app.get("/session", ((req,res) => {
+    res.send(req.session)
+    res.end()
+}))
 
+app.use("*", ((req,res) => {
+    res.status(404).send("<h1>Resource not found</h1>")
+}))
+
+app.listen(4000, () => {
+    console.log("app listening on port: 4000")
+})

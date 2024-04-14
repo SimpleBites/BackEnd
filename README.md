@@ -1,1 +1,2 @@
-Heyooooo dit is de repo voor BACKENDD WOOO
+npm run dev 
+routes/route.js 
