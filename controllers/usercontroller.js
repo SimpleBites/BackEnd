@@ -1,44 +1,12 @@
-const express = require("express")
 const {connection, pool} = require("../Database/mysql")
 const {body, validationResult} = require("express-validator")
 const session = require("express-session")
-const flash = require("connect-flash")
-const cors = require("cors")
-const bodyparser = require("body-parser")
 const crypto = require("crypto")
 const moment = require('moment');
-
-
 //const {authcheck} = require("../../middleware/authcheck")
 
-const corsOptions = {
-    origin: "http://localhost:3000",
-    credentials: true,
-    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: "Content-Type,Authorization"
-}
 
-const app = new express()
-
-app.use(bodyparser.urlencoded({
-    extended: true
-}));
-
-app.use(session({
-    secret: "harrypotter",
-    saveUninitialized: false,
-    cookie: {secure: false},
-    resave: false
-}))
-
-app.use(express.json())
-app.use(cors(corsOptions))
-app.use(bodyparser.json())
-app.use(flash())
-//app.use(authcheck)
-
-app.get("/admin/users/get", ((req,res) => {
+const userGet = async(req,res) => {
     pool.getConnection((err, connection) => {
         if(err){
             console.log(err)
@@ -51,12 +19,11 @@ app.get("/admin/users/get", ((req,res) => {
 
             const users = results
             res.json({users: users})
-
         })
     })
-}))
+}
 
-app.post("/admin/users/create", [
+const userCreate = [
     body("username").isLength({ min: 3 }).withMessage("Username must be at least 3 characters long").isLength({max:18}).withMessage("username can not be more than 18 characters "),
     body('email').isEmail().normalizeEmail().withMessage('Email must be valid').custom(async email => {
         const user = await new Promise((resolve, reject) => {
@@ -79,7 +46,7 @@ app.post("/admin/users/create", [
         }
         return true;
     }),
-], (req, res) => {
+ (req, res) => {
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
@@ -124,9 +91,10 @@ app.post("/admin/users/create", [
         });
 
     }
-});
+}
+]
 
-app.post("/admin/users/update", [
+const userUpdate = [
     body("username").isLength({ min: 3 }).withMessage("Username must be at least 3 characters long").isLength({max:18}).withMessage("username can not be more than 18 characters "),
     body('email').isEmail().normalizeEmail().withMessage('Email must be valid').custom(async email => {
         const user = await new Promise((resolve, reject) => {
@@ -143,7 +111,7 @@ app.post("/admin/users/update", [
         }
         return true;
     }),
-], (req, res) => {
+(req, res) => {
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
@@ -186,9 +154,10 @@ app.post("/admin/users/update", [
         });
 
     }
-});
+}
+]
 
-app.post("/admin/users/delete", ((req,res) => {
+const userDelete = async(req,res) => {
     const {id} = req.body.id;
 
     connection.query("delete from users where id = ?", id, (err,results) => {
@@ -198,8 +167,6 @@ app.post("/admin/users/delete", ((req,res) => {
         connection.end()
         
     })
-}))
+}
 
-app.listen(4000, () => {
-    console.log("app listening on port: 4000")
-})
+module.exports = {userGet, userCreate, userUpdate, userDelete}
