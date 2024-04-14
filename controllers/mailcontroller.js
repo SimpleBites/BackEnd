@@ -22,7 +22,7 @@ const sendMail = async (req, res) => {
           service: 'gmail',
           auth: {
             type: 'OAuth2',
-            user: 'jansoniusjur@gmail.com', // Your email remains as the authenticated user
+            user: 'jansoniusjur@gmail.com', 
             clientId: CLIENT_ID,
             clientSecret: CLEINT_SECRET,
             refreshToken: REFRESH_TOKEN,
@@ -31,8 +31,8 @@ const sendMail = async (req, res) => {
         });
     
         const mailOptions = {
-          from: req.body.email, // Sender's address provided in the request body
-          to: req.body.toEmail || 'jansoniusjur@gmail.com', // Recipient's address, defaults to your email if not provided
+          from: req.body.email, 
+          to: req.body.toEmail || 'jansoniusjur@gmail.com', 
           subject: req.body.subject,
           text: req.body.message,
           html: `<h1>${req.body.message}</h1>`,
