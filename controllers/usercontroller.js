@@ -13,12 +13,14 @@ const userGet = async(req,res) => {
         }
 
         connection.query("Select * from users", (err, results) => {
+            connection.release()
             if(err){
                 console.log(err)
             }
 
             const users = results
             res.json({users: users})
+            
         })
     })
 }

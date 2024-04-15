@@ -3,8 +3,28 @@ const {body, validationResult} = require("express-validator")
 const session = require("express-session")
 const crypto = require("crypto")
 const moment = require('moment');
+const multer  = require('multer')
+const upload = multer({ dest: 'images/' })
 //const {authcheck} = require("../../middleware/authcheck")
 
+const recipeGet = async(req,res) => {
+        pool.getConnection((err, connection) => {
+            if(err){
+                console.log(err)
+            }
+    
+            connection.query("Select * from recipes", (err, results) => {
+                connection.release()
+                if(err){
+                    console.log(err)
+                }
+    
+                const recipes = results
+                res.json({users: users})
+                
+            })
+        })
+}
 
 
 const recipeCreate = [
@@ -38,7 +58,8 @@ const recipeCreate = [
         res.json({ errors: errors.array() });
     } else {
         const formData = req.body.formData
-        console.log(formData.title)
+        console.log(formData)
+        upload.single(formData.selectedImage)
         let formattedDate = moment().format('YYYY-MM-DD HH:mm:ss');
         const recipeData = {
             title: formData.title,
