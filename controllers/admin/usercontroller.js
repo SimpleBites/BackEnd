@@ -1,29 +1,8 @@
-const {connection, pool} = require("../Database/mysql")
+const {connection, pool} = require("../../Database/mysql")
 const {body, validationResult} = require("express-validator")
 const session = require("express-session")
 const crypto = require("crypto")
 const moment = require('moment');
-//const {authcheck} = require("../../middleware/authcheck")
-
-
-const userGet = async(req,res) => {
-    pool.getConnection((err, connection) => {
-        if(err){
-            console.log(err)
-        }
-
-        connection.query("Select * from users", (err, results) => {
-            connection.release()
-            if(err){
-                console.log(err)
-            }
-
-            const users = results
-            res.json({users: users})
-            
-        })
-    })
-}
 
 const userCreate = [
     body("username").isLength({ min: 3 }).withMessage("Username must be at least 3 characters long").isLength({max:18}).withMessage("username can not be more than 18 characters "),
@@ -160,15 +139,18 @@ const userUpdate = [
 ]
 
 const userDelete = async(req,res) => {
-    const {id} = req.body.id;
-
-    connection.query("delete from users where id = ?", id, (err,results) => {
-        if(err){
-            console.log(err)
-        }
-        connection.end()
-        
+    const {id} = req.body;
+    pool.getConnection((err, connection) => {
+        connection.query("delete from users where id = ?", id, (err,results) => {
+            connection.release()
+            if(err){
+                console.log(err.code)
+            }
+        })
+        req.flash('success', `Success! User with id: ${id} is deleted`)
+        res.json({success: req.flash("success")})
     })
+
 }
 
-module.exports = {userGet, userCreate, userUpdate, userDelete}
+module.exports = {userCreate, userUpdate, userDelete}

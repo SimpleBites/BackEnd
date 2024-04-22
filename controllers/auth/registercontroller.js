@@ -41,8 +41,6 @@ async (req, res) => {
         const digest = 'sha512';  
         const hashedPassword = crypto.pbkdf2Sync(reqpassword, salt, iterations, keyLength, digest).toString('hex');
       
-   
-
         let formattedDate = moment().format('YYYY-MM-DD HH:mm:ss');
         const userData = {
             username: req.body.username,
@@ -81,7 +79,7 @@ async (req, res) => {
                 req.session.userId = results.insertId;
                 req.session.username = userData.username;
                 req.session.email = userData.email
-                
+                req.session.role = userData.role
                 req.session.save(err => {
                     if (err) {
                         console.error('Session save error:', err);

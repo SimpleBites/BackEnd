@@ -13,7 +13,7 @@ const login = [
     return res.json({ errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const  email = req.body.email;
 
   pool.getConnection(function(err, connection) {
     if (err) {
@@ -34,19 +34,26 @@ const login = [
         console.log(errors)
       }
       else if (results.length > 0) {
-        console.log(results)
-        
-        
         const user = results[0];
-        const hash = crypto.pbkdf2Sync(password, user.salt, 10000, 64, 'sha512').toString('hex');
+        const reqpassword = req.body.password
+        const salt = user.salt
+        const iterations = 10000; 
+        const keyLength = 64;  
+        const digest = 'sha512';  
+        const hash = crypto.pbkdf2Sync(reqpassword, salt, iterations, keyLength, digest).toString('hex');
+        console.log(user.password)
+        console.log(hash)
+        let hashresult = hash.slice(0,45)
+        console.log(hashresult)
+
         
-        
-        if (hash === user.password) {
+        if (hashresult === user.password) {
           const token = jwt.sign({ userId: user.id }, 'harrypotter', { expiresIn: '1h' });
           req.session.token = token;
           req.session.userId = user.id;
           req.session.username = user.username;
           req.session.email = user.email
+          req.session.role = user.role
           var hour = 3600000;
           req.session.cookie.expires = new Date(Date.now() + hour);
           req.session.cookie.maxAge = hour;
@@ -62,7 +69,7 @@ const login = [
         } else {
           connection.release();
           console.log("Incorrect password");
-          const errors = [{value: "field", value: password, msg: 'Incorrect password', path: 'password', location: 'body'}]
+          const errors = [{value: "field", value: reqpassword, msg: 'Incorrect password', path: 'password', location: 'body'}]
           return res.json({ errors: errors});
         }
       }
